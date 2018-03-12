@@ -79,7 +79,7 @@ class readable_dir(argparse.Action):
 
 def init_parser():
     parser = argparse.ArgumentParser(description="Converts JSON Schema to Plain Old Python Object")
-    parser.add_argument('json_schema_file', type=argparse.FileType('r'), help="Path to JSON Schema file to load")
+    parser.add_argument('json_schema_file', type=argparse.FileType('r', encoding='utf-8'), help="Path to JSON Schema file to load")
     parser.add_argument('-t', '--templates-folder', action=readable_dir, help="Path to templates folder", default=JsonSchema2Popo.TEMPLATES_FOLDER)
     parser.add_argument('-o', '--output-folder', action=readable_dir, help="Path to folder output", default="out/")
     return parser
