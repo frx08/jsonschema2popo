@@ -25,8 +25,10 @@ class {{model.name}}:
     def _get_{{prop._name}}(self):
         return self.__{{prop._name}}
     def _set_{{prop._name}}(self, value):
+{% if prop._type %}
         if not isinstance(value, {{prop._type}}):
             raise TypeError("{{prop._name}} must be set to {{prop._type}}")
+{% endif %}
 {% if prop.enum %}
         if value in self.{{prop.enum._name}}.__members__:
             self.__type = value
