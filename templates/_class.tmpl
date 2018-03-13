@@ -1,25 +1,25 @@
 #!/usr/bin/env/python
 
-{% if model.import_enum %}
+import json
 import enum
-{% endif %}
 
+{% for model_name, model in models.items() %}
 class {{model.name}}:
 
-{% for prop in model.properties if prop.enum %}
-    {{prop.enum._name}} = enum.Enum('{{prop.enum._name}}', '{{prop.enum._values}}', module=__name__)
+{% for prop in model.properties if prop._enum %}
+    _{{prop._name}}_types = enum.Enum('_{{prop._name}}_types', '{{prop._enum|join(' ')}}', module=__name__)
 {% endfor %}
 
-{% if model.defaults %}
+    _required = {{model.required}}
+
     def __init__(self
-{% for prop in model.defaults %}
-            , {{prop._name}}=None
+{% for prop in model.properties %}
+            , {{prop._name}}={{prop._default}}
 {% endfor %}
             ):
-{% for prop in model.defaults %}
-        self.__{{prop._name}} = {{prop._value}}
+{% for prop in model.properties %}
+        self.__{{prop._name}} = {{prop._name}}
 {% endfor %}
-{% endif %}
     
 {% for prop in model.properties %}
     def _get_{{prop._name}}(self):
@@ -29,14 +29,29 @@ class {{model.name}}:
         if not isinstance(value, {{prop._type}}):
             raise TypeError("{{prop._name}} must be set to {{prop._type}}")
 {% endif %}
-{% if prop.enum %}
-        if value in self.{{prop.enum._name}}.__members__:
+{% if prop._enum %}
+        if value in self._{{prop._name}}_types.__members__:
             self.__type = value
         else:
-            raise ValueError("Value {} not in {{prop.enum._name}} list".format(value))
+            raise ValueError("Value {} not in _{{prop._name}}_types list".format(value))
 {% else %}
         self.__{{prop._name}} = value
 {% endif %}
     {{prop._name}} = property(_get_{{prop._name}}, _set_{{prop._name}})
     
 {% endfor %}
+    def __json__(self):
+        d = dict()
+{% for prop in model.properties %}
+        if self.__{{prop._name}} or '{{prop._name}}' in self._required:
+            d['{{prop._name}}'] = self.__{{prop._name}}
+{% endfor %}
+        return d
+
+{% endfor %}
+
+class Encoder(json.JSONEncoder):
+    def default(self, obj):
+        if hasattr(obj, '__json__'):
+            return obj.__json__()
+        return super().default(obj)
