@@ -14,7 +14,6 @@ class JsonSchema2Popo(object):
     TEMPLATES_FOLDER = 'templates/'
     CLASS_TEMPLATE_FNAME = '_class.tmpl'
     
-    # add default value for type
     J2P_TYPES = {
         'string': 'str',
         'integer': 'int',
@@ -55,15 +54,6 @@ class JsonSchema2Popo(object):
                         _default = _prop['default']
                         if _type == 'str':
                             _default = "'{}'".format(_default)
-                    else:
-                        if _type == 'str':
-                            _default = "''"
-                        elif _type == 'int' or _type == 'float':
-                            _default = 0
-                        elif _type == 'list':
-                            _default = []
-                        elif _type == 'bool':
-                            _default = False
 
                     _enum = None
                     if 'enum' in _prop:
@@ -77,8 +67,6 @@ class JsonSchema2Popo(object):
                     }
 
                     model['properties'].append(prop)
-
-                #model['import_enum'] = True in ['enum' in p for p in model['properties']]
             
             self.definitions[model['name']] = model
 

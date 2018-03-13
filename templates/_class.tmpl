@@ -41,7 +41,7 @@ class {{model.name}}:
     def __json__(self):
         d = dict()
 {% for prop in model.properties %}
-        if self.__{{prop._name}}:
+        if self.__{{prop._name}} is not None:
             d['{{prop._name}}'] = self.__{{prop._name}}
 {% endfor %}
         return d
