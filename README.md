@@ -14,3 +14,8 @@ Currenty compatible with python 3.4+
 Basic:
 
     python jsonschema2popo.py /path/to/json_schema.json -o /path/to/output_folder/
+
+object JSON encoding:
+
+    g = GeneratedClass()
+    json.dumps(g, cls=generated_module.Encoder)
