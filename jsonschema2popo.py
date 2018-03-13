@@ -51,16 +51,11 @@ class JsonSchema2Popo(object):
                             '_value': _prop_value
                         })
                     
-                    if 'type' in _prop and isinstance(_prop['type'], list) and len(_prop['type']) > 1:
-                        _type = None
-                    elif 'type' in _prop and isinstance(_prop['type'], list):
+                    # support $ref, allOf..., array len > 1
+                    elif 'type' in _prop and isinstance(_prop['type'], list) and len(_prop['type']) == 0:
                         _type = self.J2P_TYPES[_prop['type'][0]]
                     elif 'type' in _prop and isinstance(_prop['type'], str):
                         _type = self.J2P_TYPES[_prop['type']]
-                    elif 'allOf' in _prop:
-                        _type = None
-                    elif '$ref' in _prop:
-                        _type = None
                     else:
                         _type = None
                     
