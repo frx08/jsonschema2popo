@@ -10,7 +10,7 @@ class {{model.name}}:
     _{{prop._name}}_types = enum.Enum('_{{prop._name}}_types', '{{prop._enum|join(' ')}}', module=__name__)
 {% endfor %}
 
-    _required = {{model.required}}
+    _required = {{model.required if model.required else []}}
 
     def __init__(self
 {% for prop in model.properties %}
