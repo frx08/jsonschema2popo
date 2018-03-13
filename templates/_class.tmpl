@@ -10,8 +10,6 @@ class {{model.name}}:
     _{{prop._name}}_types = enum.Enum('_{{prop._name}}_types', '{{prop._enum|join(' ')}}', module=__name__)
 {% endfor %}
 
-    _required = {{model.required if model.required else []}}
-
     def __init__(self
 {% for prop in model.properties %}
             , {{prop._name}}={{prop._default}}
@@ -43,7 +41,7 @@ class {{model.name}}:
     def __json__(self):
         d = dict()
 {% for prop in model.properties %}
-        if self.__{{prop._name}} or '{{prop._name}}' in self._required:
+        if self.__{{prop._name}}:
             d['{{prop._name}}'] = self.__{{prop._name}}
 {% endfor %}
         return d

@@ -38,8 +38,6 @@ class JsonSchema2Popo(object):
             model['name'] = _obj_name
             if 'type' in _obj:
                 model['type'] = _obj['type']
-            if 'required' in _obj:
-                model['required'] = _obj['required']
 
             model['properties'] = []
             if 'properties' in _obj:
