@@ -7,7 +7,7 @@ from jinja2 import Environment, FileSystemLoader
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-class JsonSchema2Popo(object):
+class JsonSchema2Popo:
     """Converts a JSON Schema to a Plain Old Python Object class"""
     definitions = {}
 
@@ -15,13 +15,13 @@ class JsonSchema2Popo(object):
     CLASS_TEMPLATE_FNAME = '_class.tmpl'
     
     J2P_TYPES = {
-        'string': 'str',
-        'integer': 'int',
-        'number': 'float',
-        'object': 'type',
-        'array': 'list',
-        'boolean': 'bool',
-        'null': 'None'
+        'string': str,
+        'integer': int,
+        'number': float,
+        'object': type,
+        'array': list,
+        'boolean': bool,
+        'null': None
     }
     
     def __init__(self):
@@ -31,7 +31,7 @@ class JsonSchema2Popo(object):
         self.process(json.load(json_schema_file))
 
     def process(self, json_schema):
-        # process base obj, properties and replace $refs
+        # process base obj, properties, replace $refs, allOf...
         for _obj_name, _obj in json_schema['definitions'].items():
             model = {}
             model['name'] = _obj_name
@@ -41,18 +41,11 @@ class JsonSchema2Popo(object):
             model['properties'] = []
             if 'properties' in _obj:
                 for _prop_name, _prop in _obj['properties'].items():
-                    # support $ref, allOf..., array len > 1
-                    if 'type' in _prop and isinstance(_prop['type'], list) and len(_prop['type']) == 0:
-                        _type = self.J2P_TYPES[_prop['type'][0]]
-                    elif 'type' in _prop and isinstance(_prop['type'], str):
-                        _type = self.J2P_TYPES[_prop['type']]
-                    else:
-                        _type = None
-                    
+                    _type = self.type_parser(_prop)
                     _default = None
                     if 'default' in _prop:
-                        _default = _prop['default']
-                        if _type == 'str':
+                        _default = _type['type'](_prop['default'])
+                        if _type == str:
                             _default = "'{}'".format(_default)
 
                     _enum = None
@@ -62,7 +55,7 @@ class JsonSchema2Popo(object):
                     _format = None
                     if 'format' in _prop:
                         _format = _prop['format']
-                    
+
                     prop = {
                         '_name': _prop_name,
                         '_type': _type,
@@ -74,6 +67,20 @@ class JsonSchema2Popo(object):
                     model['properties'].append(prop)
             
             self.definitions[model['name']] = model
+
+    def type_parser(self, t):
+        _subtype = None
+        if t['type'] == 'array' and 'items' in t:
+            _type = self.J2P_TYPES[t['type']]
+            if isinstance(t['items'], list):
+                _subtype = self.J2P_TYPES[t['items'][0]['type']]
+        elif isinstance(t['type'], list) and len(t['type']) == 0:
+            _type = self.J2P_TYPES[t['type'][0]]
+        elif t['type']:
+            _type = self.J2P_TYPES[t['type']]
+        else:
+            _type = None
+        return { 'type': _type, 'subtype': _subtype }
 
     def write_file(self, filename):
         self.jinja.get_template(self.CLASS_TEMPLATE_FNAME).stream(models=self.definitions).dump(filename)

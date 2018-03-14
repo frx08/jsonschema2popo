@@ -1,6 +1,5 @@
 #!/usr/bin/env/python
 
-import json
 import enum
 
 {% for model_name, model in models.items() %}
@@ -11,7 +10,7 @@ class {{model.name}}:
 {% endfor %}
     _types_map = {
 {% for prop in model.properties %}
-        '{{prop._name}}': {{prop._type}},
+        '{{prop._name}}': {'type': {{prop._type.type.__name__}}, 'subtype': {{prop._type.subtype.__name__ or None}}},
 {% endfor %}
     }
     _formats_map = {
@@ -34,8 +33,12 @@ class {{model.name}}:
         return self.__{{prop._name}}
     def _set_{{prop._name}}(self, value):
 {% if prop._type %}
-        if not isinstance(value, {{prop._type}}):
-            raise TypeError("{{prop._name}} must be set to {{prop._type}}")
+        if not isinstance(value, {{prop._type.type.__name__}}):
+            raise TypeError("{{prop._name}} must be {{prop._type.type.__name__}}")
+{% endif %}
+{% if prop._type.type.__name__ == 'list' and prop._type.subtype %}
+        if not all(isinstance(i, {{prop._type.subtype.__name__}}) for i in value):
+            raise TypeError("{{prop._name}} list valeus must be {{prop._type.subtype.__name__}}")
 {% endif %}
 {% if prop._enum %}
         if value in self._{{prop._name}}_enum.__members__:
@@ -52,14 +55,12 @@ class {{model.name}}:
         d = dict()
 {% for prop in model.properties %}
         if self.__{{prop._name}} is not None:
+{% if prop._type.type == 'type' %}
+            d['{{prop._name}}'] = self.__{{prop._name}}.__json__()
+{% else %}
             d['{{prop._name}}'] = self.__{{prop._name}}
+{% endif %}
 {% endfor %}
         return d
 
 {% endfor %}
-
-class Encoder(json.JSONEncoder):
-    def default(self, obj):
-        if hasattr(obj, '__json__'):
-            return obj.__json__()
-        return super().default(obj)
