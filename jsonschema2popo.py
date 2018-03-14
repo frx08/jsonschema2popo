@@ -58,12 +58,17 @@ class JsonSchema2Popo(object):
                     _enum = None
                     if 'enum' in _prop:
                         _enum = _prop['enum']
-
+                    
+                    _format = None
+                    if 'format' in _prop:
+                        _format = _prop['format']
+                    
                     prop = {
                         '_name': _prop_name,
                         '_type': _type,
                         '_default': _default,
-                        '_enum': _enum
+                        '_enum': _enum,
+                        '_format' : _format
                     }
 
                     model['properties'].append(prop)
