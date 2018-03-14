@@ -45,7 +45,7 @@ class JsonSchema2Popo:
                     _default = None
                     if 'default' in _prop:
                         _default = _type['type'](_prop['default'])
-                        if _type == str:
+                        if _type['type'] == str:
                             _default = "'{}'".format(_default)
 
                     _enum = None
@@ -55,7 +55,8 @@ class JsonSchema2Popo:
                     _format = None
                     if 'format' in _prop:
                         _format = _prop['format']
-
+                    if _type['type'] == list and 'items' in _prop and isinstance(_prop['items'], list):
+                        _format = _prop['items'][0]['format']
                     prop = {
                         '_name': _prop_name,
                         '_type': _type,
@@ -69,17 +70,17 @@ class JsonSchema2Popo:
             self.definitions[model['name']] = model
 
     def type_parser(self, t):
+        _type = None
         _subtype = None
-        if t['type'] == 'array' and 'items' in t:
-            _type = self.J2P_TYPES[t['type']]
-            if isinstance(t['items'], list):
-                _subtype = self.J2P_TYPES[t['items'][0]['type']]
-        elif isinstance(t['type'], list) and len(t['type']) == 0:
-            _type = self.J2P_TYPES[t['type'][0]]
-        elif t['type']:
-            _type = self.J2P_TYPES[t['type']]
-        else:
-            _type = None
+        if 'type' in t:
+            if t['type'] == 'array' and 'items' in t:
+                _type = self.J2P_TYPES[t['type']]
+                if isinstance(t['items'], list):
+                    _subtype = self.J2P_TYPES[t['items'][0]['type']]
+            elif isinstance(t['type'], list):
+                _type = self.J2P_TYPES[t['type'][0]]
+            elif t['type']:
+                _type = self.J2P_TYPES[t['type']]
         return { 'type': _type, 'subtype': _subtype }
 
     def write_file(self, filename):
