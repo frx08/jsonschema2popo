@@ -2,7 +2,7 @@
 
 import enum
 
-{% for model_name, model in models.items() %}
+{% for model in models %}
 class {{model.name}}:
 
 {% for prop in model.properties if prop._enum %}
@@ -10,7 +10,7 @@ class {{model.name}}:
 {% endfor %}
     _types_map = {
 {% for prop in model.properties %}
-        '{{prop._name}}': {'type': {{prop._type.type.__name__}}, 'subtype': {{prop._type.subtype.__name__ or None}}},
+        '{{prop._name}}': {'type': {{prop._type.type.__name__ or None}}, 'subtype': {{prop._type.subtype.__name__ or prop._type.subtype or None}}},
 {% endfor %}
     }
     _formats_map = {
@@ -32,13 +32,13 @@ class {{model.name}}:
     def _get_{{prop._name}}(self):
         return self.__{{prop._name}}
     def _set_{{prop._name}}(self, value):
-{% if prop._type %}
+{% if prop._type and prop._type.type %}
         if not isinstance(value, {{prop._type.type.__name__}}):
             raise TypeError("{{prop._name}} must be {{prop._type.type.__name__}}")
 {% endif %}
-{% if prop._type.type.__name__ == 'list' and prop._type.subtype %}
-        if not all(isinstance(i, {{prop._type.subtype.__name__}}) for i in value):
-            raise TypeError("{{prop._name}} list valeus must be {{prop._type.subtype.__name__}}")
+{% if prop._type and prop._type.type.__name__ == 'list' and prop._type.subtype %}
+        if not all(isinstance(i, {{prop._type.subtype.__name__ or prop._type.subtype}}) for i in value):
+            raise TypeError("{{prop._name}} list valeus must be {{prop._type.subtype.__name__ or prop._type.subtype}}")
 {% endif %}
 {% if prop._enum %}
         if value in self._{{prop._name}}_enum.__members__:
@@ -51,12 +51,14 @@ class {{model.name}}:
     {{prop._name}} = property(_get_{{prop._name}}, _set_{{prop._name}})
     
 {% endfor %}
-    def __json__(self):
+    def as_dict(self):
         d = dict()
 {% for prop in model.properties %}
         if self.__{{prop._name}} is not None:
-{% if prop._type.type == 'type' %}
-            d['{{prop._name}}'] = self.__{{prop._name}}.__json__()
+{% if prop._type.type.__name__ == 'type' %}
+            d['{{prop._name}}'] = self.__{{prop._name}}.as_dict()
+{% elif prop._type.type.__name__ == 'list' %}
+            d['{{prop._name}}'] = [p.as_dict() for p in self.__{{prop._name}}]
 {% else %}
             d['{{prop._name}}'] = self.__{{prop._name}}
 {% endif %}

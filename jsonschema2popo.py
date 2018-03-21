@@ -9,7 +9,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class JsonSchema2Popo:
     """Converts a JSON Schema to a Plain Old Python Object class"""
-    definitions = {}
+    definitions = []
 
     TEMPLATES_FOLDER = 'templates/'
     CLASS_TEMPLATE_FNAME = '_class.tmpl'
@@ -31,7 +31,7 @@ class JsonSchema2Popo:
         self.process(json.load(json_schema_file))
 
     def process(self, json_schema):
-        # process base obj, properties, replace $refs, allOf...
+        # process base obj, properties, improve replace $refs, allOf...
         for _obj_name, _obj in json_schema['definitions'].items():
             model = {}
             model['name'] = _obj_name
@@ -57,6 +57,7 @@ class JsonSchema2Popo:
                         _format = _prop['format']
                     if _type['type'] == list and 'items' in _prop and isinstance(_prop['items'], list):
                         _format = _prop['items'][0]['format']
+                    
                     prop = {
                         '_name': _prop_name,
                         '_type': _type,
@@ -67,7 +68,22 @@ class JsonSchema2Popo:
 
                     model['properties'].append(prop)
             
-            self.definitions[model['name']] = model
+            self.definitions.append(model)
+        
+        #oreder definition
+        changes = []
+        model_names = [m['name'] for m in self.definitions]
+        for model in self.definitions:
+            for prop in model['properties']:
+                if prop['_type']['type'] in model_names:
+                    changes.append([model['name'], prop['_type']['type']])
+                elif prop['_type']['subtype'] in model_names:
+                    changes.append([model['name'], prop['_type']['subtype']])
+        for change in changes:
+            model_names = [m['name'] for m in self.definitions]
+            newindex = model_names.index(change[0])
+            oldindex = model_names.index(change[1])
+            self.definitions.insert(newindex, self.definitions.pop(oldindex))
 
     def type_parser(self, t):
         _type = None
@@ -76,7 +92,23 @@ class JsonSchema2Popo:
             if t['type'] == 'array' and 'items' in t:
                 _type = self.J2P_TYPES[t['type']]
                 if isinstance(t['items'], list):
-                    _subtype = self.J2P_TYPES[t['items'][0]['type']]
+                    if 'type' in t['items'][0]:
+                        _subtype = self.J2P_TYPES[t['items'][0]['type']]
+                    elif '$ref' in t['items'][0] or 'oneOf' in t['items'][0] and len(t['items'][0]['oneOf']) == 1:
+                        if '$ref' in t['items'][0]:
+                            ref = t['items'][0]['$ref']
+                        else:
+                            ref = t['items'][0]['oneOf'][0]['$ref']
+                        _subtype = ref.split('/')[-1]
+                elif isinstance(t['items'], dict):
+                    if 'type' in t['items']:
+                        _subtype = self.J2P_TYPES[t['items']['type']]
+                    elif '$ref' in t['items'] or 'oneOf' in t['items'] and len(t['items']['oneOf']) == 1:
+                        if '$ref' in t['items']:
+                            ref = t['items']['$ref']
+                        else:
+                            ref = t['items']['oneOf'][0]['$ref']
+                        _subtype = ref.split('/')[-1]
             elif isinstance(t['type'], list):
                 _type = self.J2P_TYPES[t['type'][0]]
             elif t['type']:
