@@ -11,7 +11,7 @@ Currenty compatible with python 3.4+
 
 Basic:
 
-    python jsonschema2popo.py -o /path/to/output_file.py /path/to/json_schema.json
+    jsonschema2popo -o /path/to/output_file.py /path/to/json_schema.json
     
 object JSON encoding:
 
