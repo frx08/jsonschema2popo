@@ -17,5 +17,7 @@ Basic:
 
 object JSON encoding:
 
+    import json
+    
     g = GeneratedClass()
-    json.dumps(g, cls=generated_module.Encoder)
+    json.dumps(g.as_dict())
