@@ -10,9 +10,8 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 class JsonSchema2Popo:
     """Converts a JSON Schema to a Plain Old Python Object class"""
 
-    TEMPLATES_FOLDER = 'templates/'
     CLASS_TEMPLATE_FNAME = '_class.tmpl'
-    
+
     J2P_TYPES = {
         'string': str,
         'integer': int,
@@ -24,7 +23,7 @@ class JsonSchema2Popo:
     }
     
     def __init__(self):
-        self.jinja = Environment(loader=FileSystemLoader(os.path.join(os.path.sep, SCRIPT_DIR, self.TEMPLATES_FOLDER)), trim_blocks=True)
+        self.jinja = Environment(loader=FileSystemLoader(searchpath=SCRIPT_DIR), trim_blocks=True)
         
         self.definitions = []
 
@@ -145,11 +144,11 @@ class readable_dir(argparse.Action):
 def init_parser():
     parser = argparse.ArgumentParser(description="Converts JSON Schema to Plain Old Python Object")
     parser.add_argument('json_schema_file', type=argparse.FileType('r', encoding='utf-8'), help="Path to JSON Schema file to load")
-    parser.add_argument('-t', '--templates-folder', action=readable_dir, help="Path to templates folder", default=JsonSchema2Popo.TEMPLATES_FOLDER)
     parser.add_argument('-o', '--output-file', type=argparse.FileType('w', encoding='utf-8'), help="Path to file output", default="model.py")
     return parser
 
-if __name__ == '__main__':
+
+def main():
     parser = init_parser()
     args = parser.parse_args()
 
@@ -158,3 +157,6 @@ if __name__ == '__main__':
 
     outfile = args.output_file
     loader.write_file(outfile)
+
+if __name__ == '__main__':
+    main()

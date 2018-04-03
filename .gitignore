@@ -1,2 +1,7 @@
 *.pyc
-out/
+*.egg-info
+dist/
+build/
+
+model.py
+*.json

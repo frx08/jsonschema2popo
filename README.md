@@ -5,9 +5,7 @@ Currenty compatible with python 3.4+
 
 ## Installation
 
-    git clone https://github.com/frx08/jsonschema2popo.git
-    cd jsonschema2popo
-    pip install -r requirements.txt
+    pip install jsonschema2popo
 
 ## Usage
 
