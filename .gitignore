@@ -2,6 +2,7 @@
 *.egg-info
 dist/
 build/
+venv/
 
 model.py
 *.json
