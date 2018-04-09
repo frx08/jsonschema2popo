@@ -3,6 +3,7 @@
 import os
 import argparse
 import json
+import networkx
 from jinja2 import Environment, FileSystemLoader
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -30,25 +31,35 @@ class JsonSchema2Popo:
     def load(self, json_schema_file):
         self.process(json.load(json_schema_file))
 
+    def get_model_depencencies(self, model):
+        deps = set()
+        for prop in model['properties']:
+            if prop['_type']['type'] not in self.J2P_TYPES.values():
+                deps.add(prop['_type']['type'])
+            if prop['_type']['subtype'] not in self.J2P_TYPES.values():
+                deps.add(prop['_type']['subtype'])
+        return list(deps)
+
     def process(self, json_schema):
         for _obj_name, _obj in json_schema['definitions'].items():
             model = self.definition_parser(_obj_name, _obj)
             self.definitions.append(model)
         
-        # oreder definition
-        changes = []
-        model_names = [m['name'] for m in self.definitions]
+        # topological oderd dependencies
+        g = networkx.DiGraph()
+        models_map = {}
         for model in self.definitions:
-            for prop in model['properties']:
-                if prop['_type']['type'] in model_names:
-                    changes.append([model['name'], prop['_type']['type']])
-                elif prop['_type']['subtype'] in model_names:
-                    changes.append([model['name'], prop['_type']['subtype']])
-        for change in changes:
-            model_names = [m['name'] for m in self.definitions]
-            newindex = model_names.index(change[0])
-            oldindex = model_names.index(change[1])
-            self.definitions.insert(newindex, self.definitions.pop(oldindex))
+            models_map[model['name']] = model
+            deps = self.get_model_depencencies(model)
+            if not deps:
+                g.add_edge(model['name'], '')
+            for dep in deps:
+                g.add_edge(model['name'], dep)
+        
+        self.definitions = []
+        for model_name in networkx.topological_sort(g, reverse=True):
+            if model_name in models_map:
+                self.definitions.append(models_map[model_name])
         
         # root object
         if 'title' in json_schema:
