@@ -38,7 +38,7 @@ class {{model.name}}:
 {% endif %}
 {% if prop._type and prop._type.type.__name__ == 'list' and prop._type.subtype %}
         if not all(isinstance(i, {{prop._type.subtype.__name__ or prop._type.subtype}}) for i in value):
-            raise TypeError("{{prop._name}} list valeus must be {{prop._type.subtype.__name__ or prop._type.subtype}}")
+            raise TypeError("{{prop._name}} list values must be {{prop._type.subtype.__name__ or prop._type.subtype}}")
 {% endif %}
 {% if prop._enum %}
         if value in self._{{prop._name}}_enum.__members__:
