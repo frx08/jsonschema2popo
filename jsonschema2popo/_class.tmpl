@@ -26,6 +26,8 @@ class {{model.name}}:
             ):
 {% for prop in model.properties %}
         self.__{{prop._name}} = {{prop._name}}
+{% else %}
+        pass
 {% endfor %}
     
 {% for prop in model.properties %}
