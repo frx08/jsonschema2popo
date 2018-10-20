@@ -42,7 +42,7 @@ class {{model.name}}:
 {% endif %}
 {% if prop._enum %}
         if value in self._{{prop._name}}_enum.__members__:
-            self.__type = value
+            self.__{{prop._name}} = value
         else:
             raise ValueError("Value {} not in _{{prop._name}}_enum list".format(value))
 {% else %}
