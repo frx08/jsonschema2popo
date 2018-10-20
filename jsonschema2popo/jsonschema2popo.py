@@ -4,6 +4,7 @@ import os
 import argparse
 import json
 import networkx
+from collections import OrderedDict
 from jinja2 import Environment, FileSystemLoader
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -47,7 +48,7 @@ class JsonSchema2Popo:
         
         # topological oderd dependencies
         g = networkx.DiGraph()
-        models_map = {}
+        models_map = OrderedDict()
         for model in self.definitions:
             models_map[model['name']] = model
             deps = self.get_model_depencencies(model)
@@ -57,7 +58,7 @@ class JsonSchema2Popo:
                 g.add_edge(model['name'], dep)
         
         self.definitions = []
-        for model_name in networkx.topological_sort(g, reverse=True):
+        for model_name in networkx.topological_sort(g, nbunch=models_map.keys(), reverse=True):
             if model_name in models_map:
                 self.definitions.append(models_map[model_name])
         
