@@ -4,6 +4,7 @@ import os
 import argparse
 import json
 import networkx
+from collections import OrderedDict
 from jinja2 import Environment, FileSystemLoader
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -29,7 +30,7 @@ class JsonSchema2Popo:
         self.definitions = []
 
     def load(self, json_schema_file):
-        self.process(json.load(json_schema_file))
+        self.process(json.load(json_schema_file, object_pairs_hook=OrderedDict))
 
     def get_model_depencencies(self, model):
         deps = set()
