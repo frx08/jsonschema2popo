@@ -4,6 +4,7 @@ import os
 import argparse
 import json
 import re
+import pathlib
 
 import networkx
 from jinja2 import Environment, FileSystemLoader
@@ -51,7 +52,7 @@ class JsonSchema2Popo:
             model = self.definition_parser(_obj_name, _obj)
             self.definitions.append(model)
 
-        # topological oderd dependencies
+        # topological ordered dependencies
         g = networkx.DiGraph()
         models_map = {}
         for model in self.definitions:
@@ -169,6 +170,7 @@ class JsonSchema2Popo:
         self.jinja.get_template(self.CLASS_TEMPLATE_FNAME).stream(
             models=self.definitions
         ).dump(filename)
+        filename.close()
 
 
 class readable_dir(argparse.Action):
@@ -214,6 +216,12 @@ def main():
 
     outfile = args.output_file
     loader.write_file(outfile)
+
+    try:
+        import black
+        black.format_file_in_place(pathlib.Path(outfile.name).absolute(), 120, fast=True, write_back=black.WriteBack.YES)
+    except:
+        pass
 
 
 if __name__ == "__main__":
