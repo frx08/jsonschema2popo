@@ -79,6 +79,10 @@ class {{model.name}}{% if model.enum %}(enum.Enum){% endif %}:
 {% endif %}
 
     def __repr__(self):
+{% if model.enum %}
+        return "<Enum {{model.name}}. {}: {}>".format(self.name, self.value)
+{% else %}
         return "<Class {{model.name}}. {{ model.properties|map(attribute="_name")|map('regex_replace', '(.+)', '\\1: {}')|join(', ') }}>".format({{ model.properties|map(attribute="_name")|map('regex_replace', '(.+)', 'self.__\\1')|join(', ') }})
+{% endif %}
 
 {% endfor %}
