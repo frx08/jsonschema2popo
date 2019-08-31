@@ -3,6 +3,8 @@
 import os
 import argparse
 import json
+import re
+
 import networkx
 from jinja2 import Environment, FileSystemLoader
 
@@ -26,8 +28,9 @@ class JsonSchema2Popo:
 
     def __init__(self):
         self.jinja = Environment(
-            loader=FileSystemLoader(searchpath=SCRIPT_DIR), trim_blocks=True
+            loader=FileSystemLoader(searchpath=SCRIPT_DIR), trim_blocks=True,
         )
+        self.jinja.filters['regex_replace'] = lambda s, find, replace: re.sub(find, replace, s)
 
         self.definitions = []
 

@@ -27,6 +27,7 @@ class {{model.name}}{% if model.enum %}(enum.Enum){% endif %}:
 {% endfor %}
     }
 
+{% if not model.enum %}
     def __init__(self
 {% for prop in model.properties %}
             , {{prop._name}}={{prop._default}}
@@ -36,6 +37,7 @@ class {{model.name}}{% if model.enum %}(enum.Enum){% endif %}:
 {% for prop in model.properties %}
         self.__{{prop._name}} = {{prop._name}}
 {% endfor %}
+{% endif %}
     
 {% for prop in model.properties %}
     def _get_{{prop._name}}(self):
@@ -61,6 +63,9 @@ class {{model.name}}{% if model.enum %}(enum.Enum){% endif %}:
     
 {% endfor %}
     def as_dict(self):
+{% if model.enum %}
+        return self.value
+{% else %}
         d = dict()
 {% for prop in model.properties %}
         if self.__{{prop._name}} is not None:
@@ -71,5 +76,9 @@ class {{model.name}}{% if model.enum %}(enum.Enum){% endif %}:
 {% endif %}
 {% endfor %}
         return d
+{% endif %}
+
+    def __repr__(self):
+        return "<Class {{model.name}}. {{ model.properties|map(attribute="_name")|map('regex_replace', '(.+)', '\\1: {}')|join(', ') }}>".format({{ model.properties|map(attribute="_name")|map('regex_replace', '(.+)', 'self.__\\1')|join(', ') }})
 
 {% endfor %}
