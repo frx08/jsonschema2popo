@@ -2,8 +2,14 @@
 
 import enum
 
+
 {% for model in models %}
-class {{model.name}}:
+class {{model.name}}{% if model.enum %}(enum.Enum){% endif %}:
+
+{% for value in model.enum if model.enum %}
+    {{value}} = {% if model.text_type == "string" %}"{{value}}"{% endif %}
+
+{% endfor %}
 
 {% for prop in model.properties if prop._enum %}
     _{{prop._name}}_enum = enum.Enum('_{{prop._name}}_enum', '{{prop._enum|join(' ')}}', module=__name__)
@@ -24,6 +30,7 @@ class {{model.name}}:
             , {{prop._name}}={{prop._default}}
 {% endfor %}
             ):
+        pass
 {% for prop in model.properties %}
         self.__{{prop._name}} = {{prop._name}}
 {% endfor %}

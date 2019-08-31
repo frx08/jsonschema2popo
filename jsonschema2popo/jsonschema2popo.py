@@ -74,6 +74,10 @@ class JsonSchema2Popo:
         model['name'] = _obj_name
         if 'type' in _obj:
             model['type'] = self.type_parser(_obj)
+            model['text_type'] = _obj['type']
+
+        if 'enum' in _obj:
+            model['enum'] = _obj['enum']
 
         model['properties'] = []
         if 'properties' in _obj:
