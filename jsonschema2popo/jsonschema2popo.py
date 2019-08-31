@@ -29,9 +29,11 @@ class JsonSchema2Popo:
 
     def __init__(self):
         self.jinja = Environment(
-            loader=FileSystemLoader(searchpath=SCRIPT_DIR), trim_blocks=True,
+            loader=FileSystemLoader(searchpath=SCRIPT_DIR), trim_blocks=True
         )
-        self.jinja.filters['regex_replace'] = lambda s, find, replace: re.sub(find, replace, s)
+        self.jinja.filters["regex_replace"] = lambda s, find, replace: re.sub(
+            find, replace, s
+        )
 
         self.definitions = []
 
@@ -219,7 +221,13 @@ def main():
 
     try:
         import black
-        black.format_file_in_place(pathlib.Path(outfile.name).absolute(), 120, fast=True, write_back=black.WriteBack.YES)
+
+        black.format_file_in_place(
+            pathlib.Path(outfile.name).absolute(),
+            120,
+            fast=True,
+            write_back=black.WriteBack.YES,
+        )
     except:
         pass
 
