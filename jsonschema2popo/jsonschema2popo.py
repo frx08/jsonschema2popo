@@ -27,6 +27,14 @@ class JsonSchema2Popo:
         "null": None,
     }
 
+    @staticmethod
+    def flatten(something):
+        if isinstance(something, (list, tuple, set, range)):
+            for sub in something:
+                yield from JsonSchema2Popo.flatten(sub)
+        else:
+            yield something
+
     def __init__(self, use_types=False, constructor_type_check=False):
         self.jinja = Environment(
             loader=FileSystemLoader(searchpath=SCRIPT_DIR), trim_blocks=True
@@ -55,7 +63,6 @@ class JsonSchema2Popo:
     def process(self, json_schema):
         for _obj_name, _obj in json_schema["definitions"].items():
             model = self.definition_parser(_obj_name, _obj)
-            self.definitions.extend(model["additionalModels"])
             self.definitions.append(model)
 
         # topological ordered dependencies
@@ -83,11 +90,10 @@ class JsonSchema2Popo:
             else:
                 root_object_name = "RootObject"
             root_model = self.definition_parser(root_object_name, json_schema)
-            self.definitions.extend(root_model["additionalModels"])
             self.definitions.append(root_model)
 
-    def definition_parser(self, _obj_name, _obj):
-        model = {"name": _obj_name, "additionalModels": []}
+    def definition_parser(self, _obj_name, _obj, sub_model=""):
+        model = {"name": _obj_name, "subModels": []}
         if "type" in _obj:
             model["type"] = self.type_parser(_obj)
             model["text_type"] = _obj["type"]
@@ -108,6 +114,47 @@ class JsonSchema2Popo:
                     if _type["type"] == str:
                         _default = "'{}'".format(_default)
 
+                if "type" in _prop and _prop["type"] == "object":
+                    read_list = self.definitions[:]
+                    read_list.append(model)
+
+                    def find_parent(path, model):
+                        return [
+                            (
+                                path + "." + m["name"],
+                                find_parent(path + "." + m["name"], m),
+                            )
+                            for m in model["subModels"]
+                            if "subModels" in m
+                        ]
+
+                    potential_paths = list(
+                        JsonSchema2Popo.flatten(
+                            [find_parent(model["name"], model) for model in read_list]
+                        )
+                    )
+
+                    parent_name = sub_model + "._" + _prop_name
+                    if not sub_model:
+                        parent_name = _obj_name + "._" + _prop_name
+                        for path in potential_paths:
+                            if path.endswith(parent_name) and len(path) > len(
+                                parent_name
+                            ):
+                                parent_name = path
+
+                    _type = {
+                        "type": "_" + _prop_name,
+                        "subtype": None,
+                        "parent": parent_name,
+                    }
+
+                    model["subModels"].append(
+                        self.definition_parser(
+                            "_" + _prop_name, _prop, sub_model=parent_name
+                        )
+                    )
+
                 _enum = None
                 if "enum" in _prop:
                     _enum = {}
@@ -117,7 +164,7 @@ class JsonSchema2Popo:
                             if "javaEnumNames" not in _prop
                             else _prop["javaEnumNames"][i]
                         ] = v
-                    model["additionalModels"].append(
+                    model["subModels"].append(
                         {
                             "enum": _enum,
                             "name": "_" + _prop_name,
@@ -125,7 +172,11 @@ class JsonSchema2Popo:
                             "type": self.type_parser(_prop),
                         }
                     )
-                    _type = {"type": "_" + _prop_name, "subtype": None}
+                    _type = {
+                        "type": "_" + _prop_name,
+                        "subtype": None,
+                        "parent": _obj_name,
+                    }
 
                 _format = None
                 if "format" in _prop:
