@@ -27,9 +27,6 @@ class {{model.name}}{% if model.enum %}(enum.Enum){% endif %}:
 {% endif %}
 
 {% if model.properties %}
-{% for prop in model.properties if prop._enum %}
-    _{{prop._name}}_enum = enum.Enum('_{{prop._name}}_enum', '{{prop._enum|join(' ')}}', module=__name__)
-{% endfor %}
     _types_map = {
 {% for prop in model.properties %}
         '{{prop._name}}': {'type': {{prop._type.type.__name__ or prop._type.type or None}}, 'subtype': {{prop._type.subtype.__name__ or prop._type.subtype or None}}},
@@ -64,14 +61,7 @@ class {{model.name}}{% if model.enum %}(enum.Enum){% endif %}:
         return self.__{{prop._name}}
     def _set_{{prop._name}}(self, value):
         {{ type_check(prop, "value")|indent(8) }}
-{% if prop._enum %}
-        if value in self._{{prop._name}}_enum.__members__:
-            self.__type = value
-        else:
-            raise ValueError("Value {} not in _{{prop._name}}_enum list".format(value))
-{% else %}
         self.__{{prop._name}} = value
-{% endif %}
     {{prop._name}} = property(_get_{{prop._name}}, _set_{{prop._name}})
     
 {% endfor %}

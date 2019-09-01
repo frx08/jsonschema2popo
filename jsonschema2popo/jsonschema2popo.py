@@ -55,6 +55,7 @@ class JsonSchema2Popo:
     def process(self, json_schema):
         for _obj_name, _obj in json_schema["definitions"].items():
             model = self.definition_parser(_obj_name, _obj)
+            self.definitions.extend(model["additionalModels"])
             self.definitions.append(model)
 
         # topological ordered dependencies
@@ -82,10 +83,11 @@ class JsonSchema2Popo:
             else:
                 root_object_name = "RootObject"
             root_model = self.definition_parser(root_object_name, json_schema)
+            self.definitions.extend(root_model["additionalModels"])
             self.definitions.append(root_model)
 
     def definition_parser(self, _obj_name, _obj):
-        model = {"name": _obj_name}
+        model = {"name": _obj_name, "additionalModels": []}
         if "type" in _obj:
             model["type"] = self.type_parser(_obj)
             model["text_type"] = _obj["type"]
@@ -108,7 +110,22 @@ class JsonSchema2Popo:
 
                 _enum = None
                 if "enum" in _prop:
-                    _enum = _prop["enum"]
+                    _enum = {}
+                    for i, v in enumerate(_prop["enum"]):
+                        _enum[
+                            v
+                            if "javaEnumNames" not in _prop
+                            else _prop["javaEnumNames"][i]
+                        ] = v
+                    model["additionalModels"].append(
+                        {
+                            "enum": _enum,
+                            "name": "_" + _prop_name,
+                            "text_type": _prop["type"],
+                            "type": self.type_parser(_prop),
+                        }
+                    )
+                    _type = {"type": "_" + _prop_name, "subtype": None}
 
                 _format = None
                 if "format" in _prop:
@@ -124,7 +141,6 @@ class JsonSchema2Popo:
                     "_name": _prop_name,
                     "_type": _type,
                     "_default": _default,
-                    "_enum": _enum,
                     "_format": _format,
                 }
                 model["properties"].append(prop)
@@ -177,7 +193,7 @@ class JsonSchema2Popo:
             models=self.definitions,
             use_types=self.use_types,
             constructor_type_check=self.constructor_type_check,
-            enum_used=any("enum" in model or any(prop._enum for prop in model.properties) for model in self.definitions)
+            enum_used=any("enum" in model for model in self.definitions),
         ).dump(filename)
         filename.close()
 
@@ -213,17 +229,12 @@ def init_parser():
         help="Path to file output",
         default="model.py",
     )
-    parser.add_argument(
-        "-t",
-        "--use-types",
-        action="store_true",
-        help="Add typings"
-    )
+    parser.add_argument("-t", "--use-types", action="store_true", help="Add typings")
     parser.add_argument(
         "-ct",
         "--constructor-type-check",
         action="store_true",
-        help="Validate input types in constructor"
+        help="Validate input types in constructor",
     )
     return parser
 
@@ -232,7 +243,9 @@ def main():
     parser = init_parser()
     args = parser.parse_args()
 
-    loader = JsonSchema2Popo(use_types=args.use_types, constructor_type_check=args.constructor_type_check)
+    loader = JsonSchema2Popo(
+        use_types=args.use_types, constructor_type_check=args.constructor_type_check
+    )
     loader.load(args.json_schema_file)
 
     outfile = args.output_file
