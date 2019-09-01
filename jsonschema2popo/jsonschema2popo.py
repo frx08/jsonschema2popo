@@ -62,36 +62,36 @@ class JsonSchema2Popo:
         return list(deps)
 
     def process(self, json_schema):
-        for _obj_name, _obj in json_schema["definitions"].items():
-            model = self.definition_parser(_obj_name, _obj)
-            self.definitions.append(model)
+        if "definitions" in json_schema:
+            for _obj_name, _obj in json_schema["definitions"].items():
+                model = self.definition_parser(_obj_name, _obj)
+                self.definitions.append(model)
 
-        # topological ordered dependencies
-        g = networkx.DiGraph()
-        models_map = {}
-        for model in self.definitions:
-            models_map[model["name"]] = model
-            deps = self.get_model_dependencies(model)
-            if not deps:
-                g.add_edge(model["name"], "")
-            for dep in deps:
-                g.add_edge(model["name"], dep)
+            # topological ordered dependencies
+            g = networkx.DiGraph()
+            models_map = {}
+            for model in self.definitions:
+                models_map[model["name"]] = model
+                deps = self.get_model_dependencies(model)
+                if not deps:
+                    g.add_edge(model["name"], "")
+                for dep in deps:
+                    g.add_edge(model["name"], dep)
 
-        self.definitions = []
-        for model_name in networkx.topological_sort(g, reverse=True):
-            if model_name in models_map:
-                self.definitions.append(models_map[model_name])
+            self.definitions = []
+            for model_name in networkx.topological_sort(g, reverse=True):
+                if model_name in models_map:
+                    self.definitions.append(models_map[model_name])
 
         # create root object if there are some properties in the root
-        if "properties" in json_schema:
-            if "title" in json_schema:
-                root_object_name = "".join(
-                    x for x in json_schema["title"].title() if x.isalpha()
-                )
-            else:
-                root_object_name = "RootObject"
-            root_model = self.definition_parser(root_object_name, json_schema)
-            self.definitions.append(root_model)
+        if "title" in json_schema:
+            root_object_name = "".join(
+                x for x in json_schema["title"].title() if x.isalpha()
+            )
+        else:
+            root_object_name = "RootObject"
+        root_model = self.definition_parser(root_object_name, json_schema)
+        self.definitions.append(root_model)
 
     def definition_parser(self, _obj_name, _obj, sub_model=""):
         model = {"name": _obj_name, "subModels": []}
@@ -121,10 +121,7 @@ class JsonSchema2Popo:
 
                 def find_parent(path, model):
                     return [
-                        (
-                            path + "." + m["name"],
-                            find_parent(path + "." + m["name"], m),
-                        )
+                        (path + "." + m["name"], find_parent(path + "." + m["name"], m))
                         for m in model["subModels"]
                         if "subModels" in m
                     ]
@@ -139,9 +136,7 @@ class JsonSchema2Popo:
                 if not sub_model:
                     parent_name = _obj_name + "._" + _prop_name
                     for path in potential_paths:
-                        if path.endswith(parent_name) and len(path) > len(
-                                parent_name
-                        ):
+                        if path.endswith(parent_name) and len(path) > len(parent_name):
                             parent_name = path
 
                 if ("type" in _prop and _prop["type"] == "object") or "enum" in _prop:
@@ -226,9 +221,10 @@ class JsonSchema2Popo:
             models=self.definitions,
             use_types=self.use_types,
             constructor_type_check=self.constructor_type_check,
-            enum_used=self.enum_used
+            enum_used=self.enum_used,
         ).dump(filename)
-        filename.close()
+        if hasattr(filename, "close"):
+            filename.close()
 
 
 class readable_dir(argparse.Action):
@@ -272,6 +268,20 @@ def init_parser():
     return parser
 
 
+def format_file(filename):
+    try:
+        import black
+
+        black.format_file_in_place(
+            pathlib.Path(filename).absolute(),
+            88, # black default line length is 88
+            fast=True,
+            write_back=black.WriteBack.YES,
+        )
+    except:
+        pass
+
+
 def main():
     parser = init_parser()
     args = parser.parse_args()
@@ -283,18 +293,7 @@ def main():
 
     outfile = args.output_file
     loader.write_file(outfile)
-
-    try:
-        import black
-
-        black.format_file_in_place(
-            pathlib.Path(outfile.name).absolute(),
-            120,
-            fast=True,
-            write_back=black.WriteBack.YES,
-        )
-    except:
-        pass
+    format_file(outfile.name)
 
 
 if __name__ == "__main__":
