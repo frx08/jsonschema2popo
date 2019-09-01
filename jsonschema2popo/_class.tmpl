@@ -26,6 +26,7 @@ class {{model.name}}{% if model.enum %}(enum.Enum){% endif %}:
 {% endfor %}
 {% endif %}
 
+{% if model.properties %}
 {% for prop in model.properties if prop._enum %}
     _{{prop._name}}_enum = enum.Enum('_{{prop._name}}_enum', '{{prop._enum|join(' ')}}', module=__name__)
 {% endfor %}
@@ -39,6 +40,7 @@ class {{model.name}}{% if model.enum %}(enum.Enum){% endif %}:
         '{{prop._name}}': '{{prop._format}}',
 {% endfor %}
     }
+{% endif %}
 
 {% if not model.enum %}
     def __init__(self
