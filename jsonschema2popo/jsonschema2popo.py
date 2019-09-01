@@ -27,20 +27,23 @@ class JsonSchema2Popo:
         "null": None,
     }
 
-    def __init__(self):
+    def __init__(self, use_types=False, constructor_type_check=False):
         self.jinja = Environment(
             loader=FileSystemLoader(searchpath=SCRIPT_DIR), trim_blocks=True
         )
         self.jinja.filters["regex_replace"] = lambda s, find, replace: re.sub(
             find, replace, s
         )
+        self.jinja.filters["any"] = any
+        self.use_types = use_types
+        self.constructor_type_check = constructor_type_check
 
         self.definitions = []
 
     def load(self, json_schema_file):
         self.process(json.load(json_schema_file))
 
-    def get_model_depencencies(self, model):
+    def get_model_dependencies(self, model):
         deps = set()
         for prop in model["properties"]:
             if prop["_type"]["type"] not in self.J2P_TYPES.values():
@@ -59,7 +62,7 @@ class JsonSchema2Popo:
         models_map = {}
         for model in self.definitions:
             models_map[model["name"]] = model
-            deps = self.get_model_depencencies(model)
+            deps = self.get_model_dependencies(model)
             if not deps:
                 g.add_edge(model["name"], "")
             for dep in deps:
@@ -70,15 +73,16 @@ class JsonSchema2Popo:
             if model_name in models_map:
                 self.definitions.append(models_map[model_name])
 
-        # root object
-        if "title" in json_schema:
-            root_object_name = "".join(
-                x for x in json_schema["title"].title() if x.isalpha()
-            )
-        else:
-            root_object_name = "RootObject"
-        root_model = self.definition_parser(root_object_name, json_schema)
-        self.definitions.append(root_model)
+        # create root object if there are some properties in the root
+        if "properties" in json_schema:
+            if "title" in json_schema:
+                root_object_name = "".join(
+                    x for x in json_schema["title"].title() if x.isalpha()
+                )
+            else:
+                root_object_name = "RootObject"
+            root_model = self.definition_parser(root_object_name, json_schema)
+            self.definitions.append(root_model)
 
     def definition_parser(self, _obj_name, _obj):
         model = {"name": _obj_name}
@@ -170,7 +174,10 @@ class JsonSchema2Popo:
 
     def write_file(self, filename):
         self.jinja.get_template(self.CLASS_TEMPLATE_FNAME).stream(
-            models=self.definitions
+            models=self.definitions,
+            use_types=self.use_types,
+            constructor_type_check=self.constructor_type_check,
+            enum_used=any("enum" in model or any(prop._enum for prop in model.properties) for model in self.definitions)
         ).dump(filename)
         filename.close()
 
@@ -206,6 +213,18 @@ def init_parser():
         help="Path to file output",
         default="model.py",
     )
+    parser.add_argument(
+        "-t",
+        "--use-types",
+        action="store_true",
+        help="Add typings"
+    )
+    parser.add_argument(
+        "-ct",
+        "--constructor-type-check",
+        action="store_true",
+        help="Validate input types in constructor"
+    )
     return parser
 
 
@@ -213,7 +232,7 @@ def main():
     parser = init_parser()
     args = parser.parse_args()
 
-    loader = JsonSchema2Popo()
+    loader = JsonSchema2Popo(use_types=args.use_types, constructor_type_check=args.constructor_type_check)
     loader.load(args.json_schema_file)
 
     outfile = args.output_file

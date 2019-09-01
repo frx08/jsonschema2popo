@@ -1,6 +1,8 @@
 #!/usr/bin/env/python
 
+{% if enum_used %}
 import enum
+{% endif %}
 
 
 {% for model in models %}
@@ -30,10 +32,16 @@ class {{model.name}}{% if model.enum %}(enum.Enum){% endif %}:
 {% if not model.enum %}
     def __init__(self
 {% for prop in model.properties %}
-            , {{prop._name}}={{prop._default}}
+            , {{prop._name}}{% if use_types %}: {{prop._type.type.__name__ or prop._type.type}}{% endif %}={{prop._default}}
 {% endfor %}
             ):
         pass
+{% if constructor_type_check %}
+{% for prop in model.properties %}
+        if not isinstance({{prop._name}}, {{prop._type.type.__name__ or prop._type.type}}):
+            raise TypeError("{{prop._name}} must be {{prop._type.type.__name__ or prop._type.type}}")
+{% endfor %}
+{% endif %}
 {% for prop in model.properties %}
         self.__{{prop._name}} = {{prop._name}}
 {% endfor %}
