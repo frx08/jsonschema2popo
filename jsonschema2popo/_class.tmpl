@@ -1,3 +1,14 @@
+{% macro type_check(prop, name=None) %}
+{% if prop._type and prop._type.type %}
+if not isinstance({% if name %}{{ name }}{% else %}{{ prop._name }}{% endif %}, {{prop._type.type.__name__ or prop._type.type}}):
+    raise TypeError("{{prop._name}} must be {{prop._type.type.__name__ or prop._type.type}}")
+{% endif %}
+{% if prop._type and prop._type.type.__name__ == 'list' and prop._type.subtype %}
+if not all(isinstance(i, {{prop._type.subtype.__name__ or prop._type.subtype}}) for i in {% if name %}{{ name }}{% else %}{{ prop._name }}{% endif %}):
+    raise TypeError("{{prop._name}} list values must be {{prop._type.subtype.__name__ or prop._type.subtype}}")
+{% endif %}
+{% endmacro %}
+
 #!/usr/bin/env/python
 
 {% if enum_used %}
@@ -38,8 +49,7 @@ class {{model.name}}{% if model.enum %}(enum.Enum){% endif %}:
         pass
 {% if constructor_type_check %}
 {% for prop in model.properties %}
-        if not isinstance({{prop._name}}, {{prop._type.type.__name__ or prop._type.type}}):
-            raise TypeError("{{prop._name}} must be {{prop._type.type.__name__ or prop._type.type}}")
+        {{ type_check(prop)|indent(8) }}
 {% endfor %}
 {% endif %}
 {% for prop in model.properties %}
@@ -51,14 +61,7 @@ class {{model.name}}{% if model.enum %}(enum.Enum){% endif %}:
     def _get_{{prop._name}}(self):
         return self.__{{prop._name}}
     def _set_{{prop._name}}(self, value):
-{% if prop._type and prop._type.type %}
-        if not isinstance(value, {{prop._type.type.__name__ or prop._type.type}}):
-            raise TypeError("{{prop._name}} must be {{prop._type.type.__name__ or prop._type.type}}")
-{% endif %}
-{% if prop._type and prop._type.type.__name__ == 'list' and prop._type.subtype %}
-        if not all(isinstance(i, {{prop._type.subtype.__name__ or prop._type.subtype}}) for i in value):
-            raise TypeError("{{prop._name}} list values must be {{prop._type.subtype.__name__ or prop._type.subtype}}")
-{% endif %}
+        {{ type_check(prop, "value")|indent(8) }}
 {% if prop._enum %}
         if value in self._{{prop._name}}_enum.__members__:
             self.__type = value
