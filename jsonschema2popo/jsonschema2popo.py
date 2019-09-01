@@ -36,6 +36,7 @@ class JsonSchema2Popo:
             yield something
 
     def __init__(self, use_types=False, constructor_type_check=False):
+        self.enum_used = False
         self.jinja = Environment(
             loader=FileSystemLoader(searchpath=SCRIPT_DIR), trim_blocks=True
         )
@@ -103,6 +104,7 @@ class JsonSchema2Popo:
             for i, v in enumerate(_obj["enum"]):
                 enum[v if "javaEnumNames" not in _obj else _obj["javaEnumNames"][i]] = v
             model["enum"] = enum
+            self.enum_used = True
 
         model["properties"] = []
         if "properties" in _obj:
@@ -114,35 +116,35 @@ class JsonSchema2Popo:
                     if _type["type"] == str:
                         _default = "'{}'".format(_default)
 
-                if "type" in _prop and _prop["type"] == "object":
-                    read_list = self.definitions[:]
-                    read_list.append(model)
+                read_list = self.definitions[:]
+                read_list.append(model)
 
-                    def find_parent(path, model):
-                        return [
-                            (
-                                path + "." + m["name"],
-                                find_parent(path + "." + m["name"], m),
-                            )
-                            for m in model["subModels"]
-                            if "subModels" in m
-                        ]
-
-                    potential_paths = list(
-                        JsonSchema2Popo.flatten(
-                            [find_parent(model["name"], model) for model in read_list]
+                def find_parent(path, model):
+                    return [
+                        (
+                            path + "." + m["name"],
+                            find_parent(path + "." + m["name"], m),
                         )
+                        for m in model["subModels"]
+                        if "subModels" in m
+                    ]
+
+                potential_paths = list(
+                    JsonSchema2Popo.flatten(
+                        [find_parent(model["name"], model) for model in read_list]
                     )
+                )
 
-                    parent_name = sub_model + "._" + _prop_name
-                    if not sub_model:
-                        parent_name = _obj_name + "._" + _prop_name
-                        for path in potential_paths:
-                            if path.endswith(parent_name) and len(path) > len(
+                parent_name = sub_model + "._" + _prop_name
+                if not sub_model:
+                    parent_name = _obj_name + "._" + _prop_name
+                    for path in potential_paths:
+                        if path.endswith(parent_name) and len(path) > len(
                                 parent_name
-                            ):
-                                parent_name = path
+                        ):
+                            parent_name = path
 
+                if ("type" in _prop and _prop["type"] == "object") or "enum" in _prop:
                     _type = {
                         "type": "_" + _prop_name,
                         "subtype": None,
@@ -155,28 +157,8 @@ class JsonSchema2Popo:
                         )
                     )
 
-                _enum = None
-                if "enum" in _prop:
-                    _enum = {}
-                    for i, v in enumerate(_prop["enum"]):
-                        _enum[
-                            v
-                            if "javaEnumNames" not in _prop
-                            else _prop["javaEnumNames"][i]
-                        ] = v
-                    model["subModels"].append(
-                        {
-                            "enum": _enum,
-                            "name": "_" + _prop_name,
-                            "text_type": _prop["type"],
-                            "type": self.type_parser(_prop),
-                        }
-                    )
-                    _type = {
-                        "type": "_" + _prop_name,
-                        "subtype": None,
-                        "parent": _obj_name,
-                    }
+                    if "enum" in _prop:
+                        self.enum_used = True
 
                 _format = None
                 if "format" in _prop:
@@ -244,7 +226,7 @@ class JsonSchema2Popo:
             models=self.definitions,
             use_types=self.use_types,
             constructor_type_check=self.constructor_type_check,
-            enum_used=any("enum" in model for model in self.definitions),
+            enum_used=self.enum_used
         ).dump(filename)
         filename.close()
 
