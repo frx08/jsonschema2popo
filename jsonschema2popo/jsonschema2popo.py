@@ -271,21 +271,6 @@ class JsonSchema2Popo:
             filename.close()
 
 
-class readable_dir(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        prospective_dir = values
-        if not os.path.isdir(prospective_dir):
-            raise argparse.ArgumentTypeError(
-                "readable_dir:{} is not a valid path".format(prospective_dir)
-            )
-        if os.access(prospective_dir, os.R_OK):
-            setattr(namespace, self.dest, prospective_dir)
-        else:
-            raise argparse.ArgumentTypeError(
-                "readable_dir:{} is not a readable dir".format(prospective_dir)
-            )
-
-
 def init_parser():
     parser = argparse.ArgumentParser(
         description="Converts JSON Schema to Plain Old Python Object"
