@@ -23,6 +23,10 @@ class {{model.name}}{% if model.enum %}(enum.Enum){% endif %}:
     {{ generate_class(subModel)|indent(8) }}
 {% endfor %}
 
+{% if use_slots and not model.enum %}
+    __slots__ = [{% for prop in model.properties %}"__{{ prop._name }}", {% endfor %}]
+{% endif %}
+
 {% if model.enum %}
 {% for name, value in model.enum.items() %}
     {{name}} = {% if model.text_type == "string" %}"{{value}}"{% elif model.text_type == "integer" or model.text_type == "number" %}{{value}}{% endif %}

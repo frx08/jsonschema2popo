@@ -35,7 +35,7 @@ class JsonSchema2Popo:
         else:
             yield something
 
-    def __init__(self, use_types=False, constructor_type_check=False):
+    def __init__(self, use_types=False, constructor_type_check=False, use_slots=False):
         self.enum_used = False
         self.jinja = Environment(
             loader=FileSystemLoader(searchpath=SCRIPT_DIR), trim_blocks=True
@@ -43,8 +43,8 @@ class JsonSchema2Popo:
         self.jinja.filters["regex_replace"] = lambda s, find, replace: re.sub(
             find, replace, s
         )
-        self.jinja.filters["any"] = any
         self.use_types = use_types
+        self.use_slots = use_slots
         self.constructor_type_check = constructor_type_check
 
         self.definitions = []
@@ -266,6 +266,7 @@ class JsonSchema2Popo:
             use_types=self.use_types,
             constructor_type_check=self.constructor_type_check,
             enum_used=self.enum_used,
+            use_slots=self.use_slots,
         ).dump(filename)
         if hasattr(filename, "close"):
             filename.close()
@@ -294,6 +295,9 @@ def init_parser():
         action="store_true",
         help="Validate input types in constructor",
     )
+    parser.add_argument(
+        "-s", "--use_slots", action="store_true", help="Generate class with __slots__."
+    )
     return parser
 
 
@@ -316,7 +320,9 @@ def main():
     args = parser.parse_args()
 
     loader = JsonSchema2Popo(
-        use_types=args.use_types, constructor_type_check=args.constructor_type_check
+        use_types=args.use_types,
+        constructor_type_check=args.constructor_type_check,
+        use_slots=args.use_slots,
     )
     loader.load(args.json_schema_file)
 
