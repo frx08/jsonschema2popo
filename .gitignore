@@ -6,3 +6,4 @@ venv/
 
 model.py
 *.json
+.idea/

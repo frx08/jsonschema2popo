@@ -1,7 +1,7 @@
 # JSONSCHEMA2POPO
 
 A converter to extract 'Plain Old Python Object' classes from JSON Schema files.
-Currenty compatible with python 3.4+
+Currently compatible with python 3.4+
 
 ## Installation
 
