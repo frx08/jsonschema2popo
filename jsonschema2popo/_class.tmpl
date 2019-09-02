@@ -1,11 +1,13 @@
+{% macro get_type(prop, parent=True, sub=True) %}{{ parent and prop._type.parent or sub and prop._type.subtype.__name__ or sub and prop._type.subtype or prop._type.type.__name__ or prop._type.type or None}}{% endmacro %}
+
 {% macro type_check(prop, name=None) %}
 {% if prop._type and prop._type.type %}
-if not isinstance({% if name %}{{ name }}{% else %}{{ prop._name }}{% endif %}, {% if prop._type.parent %}{{ prop._type.parent }}{% else %}{{prop._type.type.__name__ or prop._type.type}}{% endif %}):
-    raise TypeError("{{prop._name}} must be {{prop._type.type.__name__ or prop._type.type}}")
+if not isinstance({{ name or prop._name }}, {{ get_type(prop, sub=False) }}):
+    raise TypeError("{{prop._name}} must be {{ get_type(prop, sub=False) }}")
 {% endif %}
 {% if prop._type and prop._type.type.__name__ == 'list' and prop._type.subtype %}
-if not all(isinstance(i, {% if prop._type.parent %}{{ prop._type.parent }}{% else %}{{prop._type.subtype.__name__ or prop._type.subtype}}{% endif %}) for i in {% if name %}{{ name }}{% else %}{{ prop._name }}{% endif %}):
-    raise TypeError("{{prop._name}} list values must be {{prop._type.subtype.__name__ or prop._type.subtype}}")
+if not all(isinstance(i, {{ get_type(prop) }}) for i in {% if name %}{{ name }}{% else %}{{ prop._name }}{% endif %}):
+    raise TypeError("{{prop._name}} list values must be {{ get_type(prop) }}")
 {% endif %}
 {% endmacro %}
 
@@ -44,7 +46,7 @@ class {{model.name}}{% if model.enum %}(enum.Enum){% endif %}:
 {% if not model.enum %}
     def __init__(self
 {% for prop in model.properties %}
-            , {{prop._name}}{% if use_types %}: {{prop._type.type.__name__ or prop._type.type}}{% endif %}={{prop._default}}
+            , {{prop._name}}{% if use_types %}: {{ get_type(prop, False) }}{% endif %}={{prop._default}}
 {% endfor %}
             ):
         pass
@@ -67,11 +69,31 @@ class {{model.name}}{% if model.enum %}(enum.Enum){% endif %}:
     {{prop._name}} = property(_get_{{prop._name}}, _set_{{prop._name}})
     
 {% endfor %}
+
+    @staticmethod
+    def from_dict(d):
+{% if model.enum %}
+        return {{ model.parent or model.name }}(d)
+{% else %}
+        v = {}
+{% for prop in model.properties %}
+        if "{{ prop._name }}" in d:
+            {{ type_check(prop, "d[\"" + prop._name + "\"]")|indent(12) }}
+{% if prop._type.type.__name__ == 'list' %}
+            v["{{ prop._name }}"] = [{{ get_type(prop) }}.from_dict(p) if hasattr({{ get_type(prop) }}, 'from_dict') else p for p in d["{{ prop._name }}"]]
+{% else %}
+            v["{{ prop._name }}"] = {{ get_type(prop) }}.from_dict(d["{{prop._name}}"]) if hasattr({{ get_type(prop) }}, 'from_dict') else d["{{ prop._name }}"]
+{% endif %}
+{% endfor %}
+        return {{ model.parent or model.name }}(**v)
+{% endif %}
+
+
     def as_dict(self):
 {% if model.enum %}
         return self.value
 {% else %}
-        d = dict()
+        d = {}
 {% for prop in model.properties %}
         if self.__{{prop._name}} is not None:
 {% if prop._type.type.__name__ == 'list' %}

@@ -10,6 +10,10 @@ class Abcd(enum.Enum):
     C = 2
     D = 3
 
+    @staticmethod
+    def from_dict(d):
+        return Abcd(d)
+
     def as_dict(self):
         return self.value
 

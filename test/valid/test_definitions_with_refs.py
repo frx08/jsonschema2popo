@@ -36,8 +36,27 @@ class ABcd:
 
     Child2 = property(_get_Child2, _set_Child2)
 
+    @staticmethod
+    def from_dict(d):
+        v = {}
+        if "Child1" in d:
+            if not isinstance(d["Child1"], int):
+                raise TypeError("Child1 must be int")
+
+            v["Child1"] = (
+                int.from_dict(d["Child1"]) if hasattr(int, "from_dict") else d["Child1"]
+            )
+        if "Child2" in d:
+            if not isinstance(d["Child2"], str):
+                raise TypeError("Child2 must be str")
+
+            v["Child2"] = (
+                str.from_dict(d["Child2"]) if hasattr(str, "from_dict") else d["Child2"]
+            )
+        return ABcd(**v)
+
     def as_dict(self):
-        d = dict()
+        d = {}
         if self.__Child1 is not None:
             d["Child1"] = (
                 self.__Child1.as_dict()
@@ -78,8 +97,22 @@ class SubRef:
 
     ChildA = property(_get_ChildA, _set_ChildA)
 
+    @staticmethod
+    def from_dict(d):
+        v = {}
+        if "ChildA" in d:
+            if not isinstance(d["ChildA"], ABcd):
+                raise TypeError("ChildA must be ABcd")
+
+            v["ChildA"] = (
+                ABcd.from_dict(d["ChildA"])
+                if hasattr(ABcd, "from_dict")
+                else d["ChildA"]
+            )
+        return SubRef(**v)
+
     def as_dict(self):
-        d = dict()
+        d = {}
         if self.__ChildA is not None:
             d["ChildA"] = (
                 self.__ChildA.as_dict()
@@ -127,8 +160,27 @@ class DirectRef:
 
     Child2 = property(_get_Child2, _set_Child2)
 
+    @staticmethod
+    def from_dict(d):
+        v = {}
+        if "Child1" in d:
+            if not isinstance(d["Child1"], int):
+                raise TypeError("Child1 must be int")
+
+            v["Child1"] = (
+                int.from_dict(d["Child1"]) if hasattr(int, "from_dict") else d["Child1"]
+            )
+        if "Child2" in d:
+            if not isinstance(d["Child2"], str):
+                raise TypeError("Child2 must be str")
+
+            v["Child2"] = (
+                str.from_dict(d["Child2"]) if hasattr(str, "from_dict") else d["Child2"]
+            )
+        return DirectRef(**v)
+
     def as_dict(self):
-        d = dict()
+        d = {}
         if self.__Child1 is not None:
             d["Child1"] = (
                 self.__Child1.as_dict()
@@ -153,8 +205,13 @@ class RootObject:
     def __init__(self):
         pass
 
+    @staticmethod
+    def from_dict(d):
+        v = {}
+        return RootObject(**v)
+
     def as_dict(self):
-        d = dict()
+        d = {}
         return d
 
     def __repr__(self):

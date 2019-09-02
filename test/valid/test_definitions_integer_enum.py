@@ -10,6 +10,10 @@ class ABcd(enum.Enum):
     C = 2
     D = 3
 
+    @staticmethod
+    def from_dict(d):
+        return ABcd(d)
+
     def as_dict(self):
         return self.value
 
@@ -21,8 +25,13 @@ class RootObject:
     def __init__(self):
         pass
 
+    @staticmethod
+    def from_dict(d):
+        v = {}
+        return RootObject(**v)
+
     def as_dict(self):
-        d = dict()
+        d = {}
         return d
 
     def __repr__(self):

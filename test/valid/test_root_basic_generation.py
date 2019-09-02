@@ -6,8 +6,13 @@ class Abcd:
         def __init__(self):
             pass
 
+        @staticmethod
+        def from_dict(d):
+            v = {}
+            return Abcd._Object(**v)
+
         def as_dict(self):
-            d = dict()
+            d = {}
             return d
 
         def __repr__(self):
@@ -81,14 +86,61 @@ class Abcd:
 
     def _set_Object(self, value):
         if not isinstance(value, Abcd._Object):
-            raise TypeError("Object must be _Object")
+            raise TypeError("Object must be Abcd._Object")
 
         self.__Object = value
 
     Object = property(_get_Object, _set_Object)
 
+    @staticmethod
+    def from_dict(d):
+        v = {}
+        if "Int" in d:
+            if not isinstance(d["Int"], int):
+                raise TypeError("Int must be int")
+
+            v["Int"] = (
+                int.from_dict(d["Int"]) if hasattr(int, "from_dict") else d["Int"]
+            )
+        if "Float" in d:
+            if not isinstance(d["Float"], float):
+                raise TypeError("Float must be float")
+
+            v["Float"] = (
+                float.from_dict(d["Float"])
+                if hasattr(float, "from_dict")
+                else d["Float"]
+            )
+        if "ListInt" in d:
+            if not isinstance(d["ListInt"], list):
+                raise TypeError("ListInt must be list")
+            if not all(isinstance(i, int) for i in d["ListInt"]):
+                raise TypeError("ListInt list values must be int")
+
+            v["ListInt"] = [
+                int.from_dict(p) if hasattr(int, "from_dict") else p
+                for p in d["ListInt"]
+            ]
+        if "String" in d:
+            if not isinstance(d["String"], str):
+                raise TypeError("String must be str")
+
+            v["String"] = (
+                str.from_dict(d["String"]) if hasattr(str, "from_dict") else d["String"]
+            )
+        if "Object" in d:
+            if not isinstance(d["Object"], Abcd._Object):
+                raise TypeError("Object must be Abcd._Object")
+
+            v["Object"] = (
+                Abcd._Object.from_dict(d["Object"])
+                if hasattr(Abcd._Object, "from_dict")
+                else d["Object"]
+            )
+        return Abcd(**v)
+
     def as_dict(self):
-        d = dict()
+        d = {}
         if self.__Int is not None:
             d["Int"] = (
                 self.__Int.as_dict() if hasattr(self.__Int, "as_dict") else self.__Int

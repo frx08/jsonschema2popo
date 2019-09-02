@@ -94,7 +94,7 @@ class JsonSchema2Popo:
         self.definitions.append(root_model)
 
     def definition_parser(self, _obj_name, _obj, sub_model=""):
-        model = {"name": _obj_name, "subModels": []}
+        model = {"name": _obj_name, "subModels": [], "parent": sub_model}
 
         if "$ref" in _obj and _obj["$ref"].startswith("#/definitions/"):
             # References defined at a top level should be copied from what it is referencing
@@ -120,7 +120,7 @@ class JsonSchema2Popo:
                         if built_path == ref:
                             break
 
-                    if ref_path[len(ref_path)-1] == model["name"].lstrip("_"):
+                    if ref_path[len(ref_path) - 1] == model["name"].lstrip("_"):
                         model = model.copy()
                         model["name"] = _obj_name
                         return model
@@ -174,10 +174,7 @@ class JsonSchema2Popo:
                 if "$ref" in _prop and _prop["$ref"].startswith("#/definitions/"):
                     # Properties with references should reference the existing defined classes
                     ref = _prop["$ref"].split("/")[2:]
-                    _type = {
-                        "type": "._".join(ref),
-                        "subtype": None
-                    }
+                    _type = {"type": "._".join(ref), "subtype": None}
 
                 if ("type" in _prop and _prop["type"] == "object") or "enum" in _prop:
                     _type = {
@@ -250,6 +247,13 @@ class JsonSchema2Popo:
                 _type = self.J2P_TYPES[t["type"][0]]
             elif t["type"]:
                 _type = self.J2P_TYPES[t["type"]]
+                if (
+                    _type == str
+                    and "media" in t["type"]
+                    and "format" in t["type"]["media"]
+                    and t["type"]["media"]["format"] == "base64"
+                ):
+                    _type = bytearray
         elif "$ref" in t:
             _type = t["$ref"].split("/")[-1]
         elif "anyOf" in t or "allOf" in t or "oneOf" in t:
