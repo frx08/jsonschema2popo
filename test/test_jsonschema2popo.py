@@ -248,6 +248,103 @@ class JsonSchema2Popo(unittest.TestCase):
         format_file(self.test_file)
         self.assertFileEqual(self.test_file, "valid/test_definitions_nested_objects.py")
 
+    def test_definitions_with_refs(self):
+        loader = jsonschema2popo.JsonSchema2Popo(
+            use_types=False, constructor_type_check=False
+        )
+        loader.process(
+            json.loads(
+                """{
+            "definitions": {
+                "ABcd": {
+                    "type": "object",
+                    "properties": {
+                        "Child1": {
+                            "type": "integer"
+                        },
+                        "Child2": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "SubRef": {
+                    "type": "object",
+                    "properties": {
+                        "ChildA": {
+                            "$ref": "#/definitions/ABcd"
+                        }
+                    }
+                },
+                "DirectRef": {
+                    "$ref": "#/definitions/ABcd"
+                }
+            }
+        }"""
+            )
+        )
+        loader.write_file(self.test_file)
+        format_file(self.test_file)
+        self.assertFileEqual(self.test_file, "valid/test_definitions_with_refs.py")
+
+    def test_definitions_with_nested_refs(self):
+        loader = jsonschema2popo.JsonSchema2Popo(
+            use_types=False, constructor_type_check=False
+        )
+        loader.process(
+            json.loads(
+                """{
+            "definitions": {
+                "ABcd": {
+                    "type": "object",
+                    "properties": {
+                        "Child1": {
+                            "type": "object",
+                            "properties": {
+                                "IntVal": {
+                                    "type": "integer"
+                                },
+                                "Child2": {
+                                    "type": "object",
+                                    "properties": {
+                                        "IntVal": {
+                                            "type": "integer"
+                                        },
+                                        "ListVal": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "Ref": {
+                    "$ref": "#/definitions/ABcd/Child1/Child2"
+                },
+                "AAAA": {
+                    "type": "object",
+                    "properties": {
+                        "X": {
+                            "type": "integer"
+                        },
+                        "YRef": {
+                            "$ref": "#/definitions/ABcd/Child1/Child2"
+                        }
+                    }
+                }
+            }
+        }"""
+            )
+        )
+        loader.write_file(self.test_file)
+        format_file(self.test_file)
+        self.assertFileEqual(
+            self.test_file, "valid/test_definitions_with_nested_refs.py"
+        )
+
     def assertFileEqual(self, filename1, filename2, message=""):
         with io.open(filename1) as f1:
             with io.open(filename2) as f2:

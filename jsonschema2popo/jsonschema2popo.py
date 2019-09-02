@@ -95,6 +95,38 @@ class JsonSchema2Popo:
 
     def definition_parser(self, _obj_name, _obj, sub_model=""):
         model = {"name": _obj_name, "subModels": []}
+
+        if "$ref" in _obj and _obj["$ref"].startswith("#/definitions/"):
+            # References defined at a top level should be copied from what it is referencing
+            ref_path = _obj["$ref"].split("/")[2:]
+            ref = "._".join(ref_path)
+
+            for model in self.definitions:
+                if model["name"] in ref_path:
+                    subModels = model["subModels"]
+                    built_path = model["name"]
+
+                    i = 0
+                    while i < len(subModels) and subModels:
+                        subModel = subModels[i]
+                        i = i + 1
+
+                        if "subModels" in subModel:
+                            if subModel["name"].lstrip("_") in ref_path:
+                                built_path = built_path + "." + subModel["name"]
+                                subModels = subModel["subModels"]
+                                model = subModel
+                                i = 0
+                        if built_path == ref:
+                            break
+
+                    if ref_path[len(ref_path)-1] == model["name"].lstrip("_"):
+                        model = model.copy()
+                        model["name"] = _obj_name
+                        return model
+
+            print("Unable to find object refs for ", "/".join(ref_path))
+
         if "type" in _obj:
             model["type"] = self.type_parser(_obj)
             model["text_type"] = _obj["type"]
@@ -138,6 +170,14 @@ class JsonSchema2Popo:
                     for path in potential_paths:
                         if path.endswith(parent_name) and len(path) > len(parent_name):
                             parent_name = path
+
+                if "$ref" in _prop and _prop["$ref"].startswith("#/definitions/"):
+                    # Properties with references should reference the existing defined classes
+                    ref = _prop["$ref"].split("/")[2:]
+                    _type = {
+                        "type": "._".join(ref),
+                        "subtype": None
+                    }
 
                 if ("type" in _prop and _prop["type"] == "object") or "enum" in _prop:
                     _type = {
@@ -274,7 +314,7 @@ def format_file(filename):
 
         black.format_file_in_place(
             pathlib.Path(filename).absolute(),
-            88, # black default line length is 88
+            88,  # black default line length is 88
             fast=True,
             write_back=black.WriteBack.YES,
         )
